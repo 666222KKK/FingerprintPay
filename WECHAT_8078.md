@@ -1,9 +1,9 @@
 # 微信 8.0.78（3180）个人构建
 
-本分支基于 eritpchy/FingerprintPay 主分支 `5055421`。上游已合并新版 LiteApp 支付窗口 `WxaLiteAppPayTransparentLiteUI` 的识别逻辑。本分支保留原 Zygisk 模块 ID，将版本码从 37 提升到 38，并提供只打包微信 Zygisk ZIP 的手动工作流。
+基于上游 5055421，包含 WxaLiteAppPayTransparentLiteUI 支付窗口适配。版本为 6.1.0-8078，版本码 38，保留微信 Zygisk 模块 ID。
 
-上传的目标 APK 包名为 `com.tencent.mm`，versionName `8.0.78`，versionCode `3180`，SHA-256 `41f7dc1f720767fa78fa20dd13ea034b817bbf6ebd23dfd1324c647499c9c1ba`。静态检查确认 APK 包含新旧 LiteApp 活动类、`MainSettingsUI` 和 `tenpay_keyboard_0` 标识。静态检查无法证明支付弹窗可正常识别、密码输入成功或支付安全。
+构建分支提交后自动运行 WeChat 8.0.78 Zygisk 工作流，检查安装脚本、ARM/ARM64 ELF 库、8.0.78 适配代码及 ZIP 内 SHA-256 校验文件。下载 FingerprintPay-WeChat-8078-Zygisk 工件后，解压出内层模块 ZIP，在 Magisk 中安装。
 
-在 GitHub 仓库的 Actions 中手动运行 **WeChat 8.0.78 Zygisk**，下载 `FingerprintPay-WeChat-8078-Zygisk` 工件并解压出 ZIP。保留原模块 ID，理论上可在 Magisk 中刷入覆盖旧版；请先备份原模块配置和旧 ZIP，在测试设备上验证设置入口、普通支付、小程序支付、取消支付和失败回退后再用于日常支付。不要在测试中向任何人提供支付密码。
+目标 APK 为 com.tencent.mm，8.0.78（3180），SHA-256：41f7dc1f720767fa78fa20dd13ea034b817bbf6ebd23dfd1324c647499c9c1ba。
 
-此仓库保留原项目许可证与作者信息。默认上游自动更新地址已对个人构建停用，以免被上游旧版覆盖。
+构建检查不能替代真机测试。设置入口、普通支付、小程序支付、取消支付和失败回退需要在设备上验证。上游自动更新地址已停用，避免旧版覆盖本构建。保留原项目许可证与作者信息。
