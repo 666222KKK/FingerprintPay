@@ -1,93 +1,61 @@
-name: Android CI
+name: WeChat 8.0.78 Zygisk
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [wechat-8078]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
     steps:
-      - name: Get current time
-        id: current-time
-        run: echo "formattedTime=$(TZ='Asia/Shanghai' date '+%Y%m%d-%H')" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libarchive-zip-perl
-      - name: Decode proguard rules
-        uses: mobiledevops/secret-to-file-action@v1
-        with:
-          base64-encoded-secret: ${{ secrets.PROGUARD_RULES }}
-          filename: "app/proguard-rules.pro"
-      - name: Decode keystore
-        uses: mobiledevops/secret-to-file-action@v1
-        with:
-          base64-encoded-secret: ${{ secrets.SIGNING_STORE_BASE64 }}
-          filename: "app/keystore.jks"
       - uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
           cache: gradle
-      - name: Build Riru modules
-        run: cd ./module && bash ./make.sh
-        env:
-          BUILD_RELEASE_MINIFYENABLED: ${{ vars.BUILD_RELEASE_MINIFYENABLED }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-      - name: Build with Gradle
-        run:  ./gradlew clean && ./gradlew ":app:assembleRelease" -Pxposed=true
-        env:
-          BUILD_RELEASE_MINIFYENABLED: ${{ vars.BUILD_RELEASE_MINIFYENABLED }}
-          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
-      - name: Upload Apk
-        uses: actions/upload-artifact@v4
-        with:
-          name: xposed.${{ steps.current-time.outputs.formattedTime }}
-          path: app/build/outputs/apk/release/*.apk
-      - name: Upload Mapping
-        uses: actions/upload-artifact@v4
-        with:
-          name: mapping.${{ steps.current-time.outputs.formattedTime }}
-          path: app/build/outputs/mapping/release/mapping.txt
-      - name: Upload Riru Modules
-        uses: actions/upload-artifact@v4
-        with:
-          name: magisk.${{ steps.current-time.outputs.formattedTime }}
-          path: |
-            module/build/release/*.zip
-            !module/build/release/*-all-*.zip
-      - name: Assign release version from version.properties to Env variable
+      - name: Install Perl ZIP module
+        run: sudo apt-get update && sudo apt-get install -y libarchive-zip-perl
+      - name: Build WeChat APK resource
+        run: ./gradlew :app:assembleRelease
+      - name: Package Zygisk module
+        run: cd module && bash ./build.sh :module:assembleRelease ./src/gradle/wechat.gradle Zygisk
+      - name: Check installable ZIP metadata
         run: |
-          cat ./app/build.gradle| grep versionName | sed -E 's/.+"(.+)".*/release_version=\1/g' >> $GITHUB_ENV
-      - name: Echo release version from  Env variable
-        run: |
-          echo "${{ env.release_version }}"
-      - name: Delete drafts
-        run: gh release list --json tagName,isDraft -q '.[] | select(.isDraft) | .tagName' | xargs -I {} gh release delete {} --yes 2>/dev/null || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Release draft
-        uses: softprops/action-gh-release@v2
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          files = list(Path('module/build/release').glob('zygisk-module-xfingerprint-pay-wechat-*.zip'))
+          assert len(files) == 1, files
+          with ZipFile(files[0]) as z:
+              prop = z.read('module.prop').decode()
+              assert 'id=zygisk-module-xfingerprint-pay-wechat' in prop, prop
+              assert 'versionCode=38' in prop, prop
+              assert 'version=v6.1.0-8078' in prop, prop
+              assert 'zygisk/arm64-v8a.so' not in z.namelist()  # installer extracts from lib/
+              import hashlib
+              for abi in ('armeabi-v7a', 'arm64-v8a'):
+                  lib = f'lib/{abi}/libzygisk-module-xfingerprint-pay-wechat.so'
+                  data = z.read(lib)
+                  assert data.startswith(b'\x7fELF'), lib
+                  assert b'WxaLiteAppPayTransparentLiteUI' in data, '8.0.78 hook missing'
+                  assert b'com/surcumference/fingerprint/plugin/magisk/WeChat' in data, 'entry missing'
+              for name in z.namelist():
+                  if name.endswith('.sha256sum'):
+                      target = name[:-10]
+                      assert hashlib.sha256(z.read(target)).hexdigest() == z.read(name).decode().strip(), target
+              for required in ('customize.sh', 'verify.sh', 'META-INF/com/google/android/update-binary'):
+                  assert required in z.namelist(), required
+          print(files[0])
+          PY
+      - uses: actions/upload-artifact@v4
         with:
-          draft: true
-          name: "${{ env.release_version }}"
-          tag_name: "${{ env.release_version }}-ci"
-          files: |
-            module/build/release/*.zip
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/mapping/release/mapping.txt
-          body: "[Github Action](https://github.com/${{github.repository}}/actions/runs/${{github.run_id}})"
+          name: FingerprintPay-WeChat-8078-Zygisk
+          path: module/build/release/zygisk-module-xfingerprint-pay-wechat-*.zip

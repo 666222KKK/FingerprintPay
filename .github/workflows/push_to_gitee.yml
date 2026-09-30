@@ -4,6 +4,7 @@ on:
 
 jobs:
   repo-sync:
+    if: github.repository == 'eritpchy/FingerprintPay'
     runs-on: ubuntu-latest
     steps:
       - name: Mirror the Github organization repos to Gitee.
