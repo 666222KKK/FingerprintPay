@@ -12,6 +12,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      BUILD_RELEASE_MINIFYENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,8 +39,8 @@ jobs:
           with ZipFile(files[0]) as z:
               prop = z.read('module.prop').decode()
               assert 'id=zygisk-module-xfingerprint-pay-wechat' in prop, prop
-              assert 'versionCode=38' in prop, prop
-              assert 'version=v6.1.0-8078' in prop, prop
+              assert 'versionCode=39' in prop, prop
+              assert 'version=v6.1.0-8078.1' in prop, prop
               assert 'zygisk/arm64-v8a.so' not in z.namelist()  # installer extracts from lib/
               import hashlib
               for abi in ('armeabi-v7a', 'arm64-v8a'):

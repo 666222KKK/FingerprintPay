@@ -1,19 +1,15 @@
-# Add project specific ProGuard rules here.
-# By default, the flags in this file are appended to flags specified
-# in E:\Android\android-sdk-windows/tools/proguard/proguard-android.txt
-# You can edit the include path and order by changing the proguardFiles
-# directive in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
-
-# Add any project specific keep options here:
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
-
--keep class com.hjq.toast.** {*;}
+# Shrink unreachable code while preserving reflective names and behavior.
+-dontobfuscate
+-dontoptimize
+-keepattributes Signature,*Annotation*,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+-keep @androidx.annotation.Keep class * { *; }
+-keepclassmembers class * { @androidx.annotation.Keep <methods>; @androidx.annotation.Keep <fields>; }
+# JNI loads this class and the two-String static main method by name.
+-keep class com.surcumference.fingerprint.plugin.magisk.WeChatPlugin { *; }
+# Injected UI and Gson fields are outside APK manifest reachability.
+-keep class com.surcumference.fingerprint.view.** { *; }
+-keep class com.surcumference.fingerprint.bean.** { *; }
+-keep class com.surcumference.fingerprint.network.update.github.bean.** { *; }
+-keep class com.hjq.toast.** { *; }
+# Xposed APIs are optional host-provided dependencies, unused by Zygisk.
+-dontwarn de.robv.android.xposed.**
