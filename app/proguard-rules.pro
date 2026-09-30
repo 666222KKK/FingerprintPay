@@ -13,3 +13,6 @@
 -keep class com.hjq.toast.** { *; }
 # Xposed APIs are optional host-provided dependencies, unused by Zygisk.
 -dontwarn de.robv.android.xposed.**
+
+# Legacy Samsung vendor framework classes are supplied only by Samsung devices.
+-dontwarn com.samsung.android.fingerprint.**
